@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq;
-using System.Net;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
@@ -19,8 +16,8 @@ namespace BBDown;
 public class BBDownApiServer
 {
     private WebApplication? app;
-    private List<DownloadTask> runningTasks = [];
-    private List<DownloadTask> finishedTasks = [];
+    private readonly List<DownloadTask> runningTasks = [];
+    private readonly List<DownloadTask> finishedTasks = [];
 
     public void SetUpServer()
     {
@@ -55,10 +52,7 @@ public class BBDownApiServer
             {
                 return Results.NotFound();
             }
-            else
-            {
-                return Results.Json(task, AppJsonSerializerContext.Default.DownloadTask);
-            }
+            return Results.Json(task, AppJsonSerializerContext.Default.DownloadTask);
         });
         app.MapPost("/add-task", (MyOptionBindingResult<MyOption> bindingResult) =>
         {
@@ -68,7 +62,7 @@ public class BBDownApiServer
                 return Results.BadRequest("输入有误");
             }
             var req = bindingResult.Result;
-            AddDownloadTaskAsync(req);
+            _ = AddDownloadTaskAsync(req);
             return Results.Ok();
         });
         var finishedRemovalApi = app.MapGroup("remove-finished");
@@ -104,12 +98,12 @@ public class BBDownApiServer
         runningTasks.Add(task);
         try
         {
-            var (encodingPriority, dfnPriority, firstEncoding, downloadDanmaku, input, savePathFormat, lang, aidOri, delay) = Program.SetUpWork(option);
+            var (encodingPriority, dfnPriority, firstEncoding, downloadDanmaku, downloadDanmakuFormats, input, savePathFormat, lang, aidOri, delay) = Program.SetUpWork(option);
             var (fetchedAid, vInfo, apiType) = await Program.GetVideoInfoAsync(option, aidOri, input);
             task.Title = vInfo.Title;
             task.Pic = vInfo.Pic;
             task.VideoPubTime = vInfo.PubTime;
-            await Program.DownloadPagesAsync(option, vInfo, encodingPriority, dfnPriority, firstEncoding, downloadDanmaku,
+            await Program.DownloadPagesAsync(option, vInfo, encodingPriority, dfnPriority, firstEncoding, downloadDanmaku, downloadDanmakuFormats,
                         input, savePathFormat, lang, fetchedAid, delay, apiType, task);
             task.IsSuccessful = true;
         }
